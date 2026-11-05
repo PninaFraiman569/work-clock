@@ -1,0 +1,21 @@
+# משימה אוטומטית שפונה למסד הנתונים כל 3 ימים,
+# כדי ש-Supabase לא ישהה את הפרויקט החינמי אחרי שבוע בלי פעילות.
+# דורשת שני Secrets במאגר: SUPABASE_URL ו-SUPABASE_ANON_KEY (ראו README).
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          curl -fsS "$SUPABASE_URL/rest/v1/keepalive?select=id" \
+            -H "apikey: $SUPABASE_ANON_KEY"

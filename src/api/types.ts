@@ -1,0 +1,61 @@
+export interface WorkSession {
+  id: string
+  user_id: string
+  start_at: string // ISO
+  end_at: string | null // null = השעון רץ
+  description: string
+}
+
+export interface DayNote {
+  day: string // yyyy-MM-dd
+  note: string
+}
+
+export interface Profile {
+  id: string
+  username: string
+  display_name: string
+  is_admin: boolean
+  cycle_start_day: number
+  disabled: boolean
+}
+
+export interface NewUserInput {
+  username: string
+  display_name: string
+  password: string
+  cycle_start_day: number
+}
+
+export interface Api {
+  readonly demo: boolean
+
+  // התחברות
+  currentUserId(): Promise<string | null>
+  onAuthChange(cb: (userId: string | null) => void): () => void
+  signIn(username: string, password: string): Promise<void>
+  signOut(): Promise<void>
+  changePassword(newPassword: string): Promise<void>
+  getProfile(): Promise<Profile>
+
+  // רישומי עבודה
+  listSessions(from: Date, to: Date): Promise<WorkSession[]>
+  getRunning(): Promise<WorkSession | null>
+  startSession(description: string): Promise<WorkSession>
+  stopSession(id: string): Promise<WorkSession>
+  createSession(input: { start_at: string; end_at: string; description: string }): Promise<WorkSession>
+  updateSession(id: string, patch: Partial<Pick<WorkSession, 'start_at' | 'end_at' | 'description'>>): Promise<WorkSession>
+  deleteSession(id: string): Promise<void>
+
+  // הערות יומיות
+  listNotes(fromDay: string, toDay: string): Promise<DayNote[]>
+  saveNote(day: string, note: string): Promise<void>
+
+  // ניהול (מנהל בלבד)
+  adminListUsers(): Promise<Profile[]>
+  adminCreateUser(input: NewUserInput): Promise<void>
+  adminResetPassword(userId: string, password: string): Promise<void>
+  adminUpdateUser(userId: string, patch: { display_name?: string; cycle_start_day?: number; disabled?: boolean }): Promise<void>
+}
+
+export class ApiError extends Error {}
