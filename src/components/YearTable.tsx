@@ -1,21 +1,21 @@
 import { ChevronLeft } from 'lucide-react'
 import type { WorkSession } from '../api'
 import { useNow } from '../hooks/hooks'
-import { cycleRangeText, formatDuration, groupByDay, HEB_MONTHS, piecesInRange, sumMs, yearCycles, type Cycle } from '../lib/time'
+import { cycleRangeText, formatDuration, groupByDay, HEB_MONTHS, piecesInRange, sumMs, yearCycles, type Cycle, type CycleSchedule } from '../lib/time'
 
 export function YearTable({
   year,
-  startDay,
+  schedule,
   sessions,
   onOpenMonth,
 }: {
   year: number
-  startDay: number
+  schedule: CycleSchedule
   sessions: WorkSession[]
   onOpenMonth: (c: Cycle) => void
 }) {
   const now = useNow(30_000)
-  const rows = yearCycles(year, startDay).map((c) => {
+  const rows = yearCycles(year, schedule).map((c) => {
     const pieces = piecesInRange(sessions, c, now)
     return { cycle: c, ms: sumMs(pieces), days: groupByDay(pieces).size, future: c.start > now }
   })
@@ -55,6 +55,7 @@ export function YearTable({
                 <button className="font-display text-[17px] font-medium group-hover:text-brand" onClick={() => onOpenMonth(r.cycle)}>
                   {HEB_MONTHS[r.cycle.labelMonth]}
                 </button>
+                {r.cycle.transition && <span className="ms-2 rounded-md bg-note-tint px-1.5 py-0.5 text-xs font-medium text-note">מעבר</span>}
               </td>
               <td className="num px-3 py-3.5 text-[15px] text-ink-soft">{cycleRangeText(r.cycle)}</td>
               <td className="num px-3 py-3.5">{r.days || '–'}</td>

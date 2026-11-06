@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { KeyRound, LoaderCircle, UserPlus } from 'lucide-react'
+import { CalendarCog, KeyRound, LoaderCircle, UserPlus } from 'lucide-react'
 import { api, type Profile } from '../api'
 import { DEFAULT_CYCLE_START_DAY } from '../config'
+import { MonthSettingsDialog } from './MonthSettingsDialog'
 import { useLoad } from '../hooks/hooks'
 import { Modal } from './Modal'
 import { toast, toastError } from './Toaster'
@@ -11,8 +12,9 @@ const CYCLE_DAYS = Array.from({ length: 28 }, (_, i) => i + 1)
 export function AdminPanel({ me, onClose, onSelfChanged }: { me: Profile; onClose: () => void; onSelfChanged: () => void }) {
   const users = useLoad(() => api.adminListUsers(), [])
   const [resetFor, setResetFor] = useState<Profile | null>(null)
+  const [monthFor, setMonthFor] = useState<Profile | null>(null)
 
-  async function update(u: Profile, patch: { display_name?: string; cycle_start_day?: number; disabled?: boolean }, msg: string) {
+  async function update(u: Profile, patch: { display_name?: string; disabled?: boolean }, msg: string) {
     try {
       await api.adminUpdateUser(u.id, patch)
       toast(msg)
@@ -53,18 +55,15 @@ export function AdminPanel({ me, onClose, onSelfChanged }: { me: Profile; onClos
                     {u.username}
                   </td>
                   <td className="px-3 py-2.5">
-                    <select
-                      className="field h-9 w-24 px-2"
-                      value={u.cycle_start_day}
-                      onChange={(e) => update(u, { cycle_start_day: Number(e.target.value) }, 'יום תחילת המחזור עודכן')}
-                      aria-label={`יום תחילת המחזור של ${u.display_name || u.username}`}
+                    <button
+                      className="btn btn-ghost h-8 px-2.5 text-sm"
+                      onClick={() => setMonthFor(u)}
+                      title="הגדרת חודש והיסטוריה"
+                      aria-label={`הגדרת חודש של ${u.display_name || u.username}`}
                     >
-                      {CYCLE_DAYS.map((d) => (
-                        <option key={d} value={d}>
-                          {d} לחודש
-                        </option>
-                      ))}
-                    </select>
+                      <CalendarCog size={15} />
+                      {u.cycle_start_day} לחודש
+                    </button>
                   </td>
                   <td className="px-3 py-2.5">
                     {u.id === me.id ? (
@@ -95,6 +94,17 @@ export function AdminPanel({ me, onClose, onSelfChanged }: { me: Profile; onClos
       )}
 
       {resetFor && <ResetPassword user={resetFor} onDone={() => setResetFor(null)} />}
+      {monthFor && (
+        <MonthSettingsDialog
+          user={monthFor}
+          isSelf={monthFor.id === me.id}
+          onClose={() => setMonthFor(null)}
+          onSaved={() => {
+            void users.reload()
+            if (monthFor.id === me.id) onSelfChanged()
+          }}
+        />
+      )}
     </Modal>
   )
 }

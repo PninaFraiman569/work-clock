@@ -12,6 +12,7 @@ import {
   piecesInRange,
   sumMs,
   yearCycles,
+  type CycleSchedule,
   type Range,
 } from './time'
 import { hebrewDate } from './hebrew'
@@ -24,7 +25,7 @@ export interface ExportRequest {
   sessions: WorkSession[]
   notes: DayNote[]
   userName: string
-  startDay: number
+  schedule: CycleSchedule
   year?: number
 }
 
@@ -173,7 +174,7 @@ export async function exportToExcel(req: ExportRequest) {
     styleHeader(ws3, 3)
     r = 4
     let sum = 0
-    for (const c of yearCycles(req.year, req.startDay)) {
+    for (const c of yearCycles(req.year, req.schedule)) {
       const ps = piecesInRange(req.sessions, c, now)
       const ms = sumMs(ps)
       sum += ms

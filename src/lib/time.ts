@@ -71,27 +71,67 @@ export interface Cycle extends Range {
   /** החודש שבו המחזור מסתיים, לפיו הוא נקרא (מחזור נובמבר = 27/10 עד 26/11) */
   labelYear: number
   labelMonth: number // 0-11
+  /** החודש הראשון אחרי שינוי הגדרה: הוא ארוך או קצר מהרגיל */
+  transition: boolean
 }
 
-function makeCycle(start: Date): Cycle {
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, start.getDate())
-  const last = addDays(end, -1)
-  return { start, end, labelYear: last.getFullYear(), labelMonth: last.getMonth() }
+/**
+ * לוח המחזורים של משתמש: היום שבו החודש מתחיל, ושינויים שנכנסים לתוקף מחודש מסוים.
+ * כל מחזור מסתיים לפי ההגדרה שתקפה לו, ומתחיל ביום שאחרי סוף המחזור הקודם.
+ * כך שינוי לא משפיע אחורה, ואין ימים כפולים או חסרים.
+ */
+export interface CycleSchedule {
+  baseDay: number
+  rules: { fromIndex: number; startDay: number }[] // ממוין לפי החודש
+}
+
+export const fixedSchedule = (day: number): CycleSchedule => ({ baseDay: day, rules: [] })
+
+/** מספר רץ של חודש, לחישובים */
+export const monthIndex = (year: number, month: number) => year * 12 + month
+
+export function startDayAt(schedule: CycleSchedule, index: number): number {
+  let day = schedule.baseDay
+  for (const rule of schedule.rules) {
+    if (rule.fromIndex > index) break
+    day = rule.startDay
+  }
+  return day
+}
+
+/** הלוח אחרי בחירת הגדרה חדשה מחודש מסוים. מחליף שינויים שעוד לא נכנסו לתוקף. */
+export function withRule(schedule: CycleSchedule, fromIndex: number, startDay: number): CycleSchedule {
+  return { baseDay: schedule.baseDay, rules: [...schedule.rules.filter((r) => r.fromIndex < fromIndex), { fromIndex, startDay }] }
+}
+
+function lastDayAt(schedule: CycleSchedule, index: number): Date {
+  const year = Math.floor(index / 12)
+  const month = index - year * 12
+  const day = startDayAt(schedule, index)
+  return day === 1 ? new Date(year, month + 1, 0) : new Date(year, month, day - 1)
+}
+
+/** המחזור שנקרא על שם החודש במספר הרץ index */
+export function cycleAtIndex(schedule: CycleSchedule, index: number): Cycle {
+  const last = lastDayAt(schedule, index)
+  return {
+    start: addDays(lastDayAt(schedule, index - 1), 1),
+    end: addDays(last, 1),
+    labelYear: last.getFullYear(),
+    labelMonth: last.getMonth(),
+    transition: startDayAt(schedule, index) !== startDayAt(schedule, index - 1),
+  }
 }
 
 /** המחזור שהתאריך שייך אליו */
-export function cycleFor(date: Date, startDay: number): Cycle {
-  const y = date.getFullYear()
-  const m = date.getMonth()
-  const start = date.getDate() >= startDay ? new Date(y, m, startDay) : new Date(y, m - 1, startDay)
-  return makeCycle(start)
+export function cycleFor(date: Date, schedule: CycleSchedule): Cycle {
+  const index = monthIndex(date.getFullYear(), date.getMonth())
+  return startOfDay(date) <= lastDayAt(schedule, index) ? cycleAtIndex(schedule, index) : cycleAtIndex(schedule, index + 1)
 }
 
 /** המחזור שנקרא על שם חודש מסוים (החודש שבו הוא מסתיים) */
-export function cycleByLabel(year: number, month: number, startDay: number): Cycle {
-  // היום האחרון במחזור נמצא בחודש הזה; לוקחים את היום שלפני תחילת המחזור הבא
-  const lastDay = startDay === 1 ? new Date(year, month + 1, 0) : new Date(year, month, startDay - 1)
-  return cycleFor(lastDay, startDay)
+export function cycleByLabel(year: number, month: number, schedule: CycleSchedule): Cycle {
+  return cycleAtIndex(schedule, monthIndex(year, month))
 }
 
 export function cycleTitle(c: Cycle): string {
@@ -103,12 +143,12 @@ export function cycleRangeText(c: Cycle): string {
 }
 
 /** שנה לועזית: כל המחזורים שמסתיימים בחודשים ינואר עד דצמבר של אותה שנה */
-export function yearCycles(year: number, startDay: number): Cycle[] {
-  return Array.from({ length: 12 }, (_, m) => cycleByLabel(year, m, startDay))
+export function yearCycles(year: number, schedule: CycleSchedule): Cycle[] {
+  return Array.from({ length: 12 }, (_, m) => cycleByLabel(year, m, schedule))
 }
 
-export function yearRange(year: number, startDay: number): Range {
-  const cycles = yearCycles(year, startDay)
+export function yearRange(year: number, schedule: CycleSchedule): Range {
+  const cycles = yearCycles(year, schedule)
   return { start: cycles[0].start, end: cycles[11].end }
 }
 

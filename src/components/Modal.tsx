@@ -1,19 +1,35 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+
+// החלונות הפתוחים, כדי ש-Esc יסגור רק את העליון
+const openModals: object[] = []
 
 export function Modal({
   title,
   onClose,
   children,
   wide,
+  persistent,
 }: {
   title: string
   onClose: () => void
   children: ReactNode
   wide?: boolean
+  /** בלי כפתור סגירה: נסגר רק מתוך התוכן */
+  persistent?: boolean
 }) {
+  const self = useRef({})
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const me = self.current
+    openModals.push(me)
+    return () => {
+      openModals.splice(openModals.indexOf(me), 1)
+    }
+  }, [])
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && openModals[openModals.length - 1] === self.current) onClose()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
@@ -29,9 +45,11 @@ export function Modal({
       >
         <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="font-display text-xl font-semibold text-ink">{title}</h2>
-          <button onClick={onClose} className="icon-btn" aria-label="סגירה">
-            <X size={20} />
-          </button>
+          {!persistent && (
+            <button onClick={onClose} className="icon-btn" aria-label="סגירה">
+              <X size={20} />
+            </button>
+          )}
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>

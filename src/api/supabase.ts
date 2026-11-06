@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { ApiError, type Api, type DayNote, type NewUserInput, type Profile, type WorkSession } from './types'
+import { ApiError, type Api, type CycleHistory, type DayNote, type NewUserInput, type Profile, type WorkSession } from './types'
 import { usernameToEmail } from '../lib/username'
 
 const SESSION_COLS = 'id,user_id,start_at,end_at,description'
@@ -16,6 +16,7 @@ function translateError(message: string, code?: string): string {
   if (/banned/i.test(message)) return 'המשתמש הזה הושבת. אפשר לפנות למנהל.'
   if (/Password should be/i.test(message)) return 'הסיסמה קצרה מדי. צריך לפחות 6 תווים.'
   if (/same_password|different from the old/i.test(message)) return 'הסיסמה החדשה זהה לישנה.'
+  if (code === 'PGRST202') return 'הגדרת החודש עוד לא הופעלה. צריך להריץ ב-Supabase את הקובץ supabase/cycle-changes.sql.'
   if (/Failed to fetch|NetworkError/i.test(message)) return 'אין חיבור לשרת. כדאי לבדוק את החיבור לאינטרנט.'
   return message
 }
@@ -77,6 +78,21 @@ export function createSupabaseApi(url: string, key: string): Api {
     async getProfile() {
       const id = await uid()
       return check(await sb.from('profiles').select('*').eq('id', id).single()) as Profile
+    },
+
+    async getCycleHistory(userId) {
+      const res = await sb.rpc('get_cycle_history', { target_user: userId ?? null })
+      // ה-SQL של הגדרת החודש עוד לא הורץ: אין עדיין היסטוריה
+      if (res.error?.code === 'PGRST202') return { since: null, changes: [] }
+      return check(res) as CycleHistory
+    },
+
+    async setCycleStartDay(day, userId) {
+      check(await sb.rpc('set_cycle_start_day', { new_day: day, target_user: userId ?? null }))
+    },
+
+    async ackCycleNotices() {
+      check(await sb.rpc('ack_cycle_notices'))
     },
 
     async listSessions(from, to) {

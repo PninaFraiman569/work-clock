@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { api, type Profile } from './api'
+import { useCallback, useEffect, useState } from 'react'
+import { api, type CycleHistory, type Profile } from './api'
 import { Login } from './components/Login'
 import { MainScreen } from './components/MainScreen'
 import { Toaster, toastError } from './components/Toaster'
@@ -7,7 +7,13 @@ import { Logo } from './components/Logo'
 
 export function App() {
   const [userId, setUserId] = useState<string | null | undefined>(undefined)
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const [account, setAccount] = useState<{ profile: Profile; history: CycleHistory } | null>(null)
+  const profile = account?.profile ?? null
+
+  const loadAccount = useCallback(async () => {
+    const [profile, history] = await Promise.all([api.getProfile(), api.getCycleHistory()])
+    setAccount({ profile, history })
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -21,17 +27,14 @@ export function App() {
 
   useEffect(() => {
     if (!userId) {
-      setProfile(null)
+      setAccount(null)
       return
     }
-    api
-      .getProfile()
-      .then(setProfile)
-      .catch((e) => {
-        toastError(e)
-        void api.signOut()
-      })
-  }, [userId])
+    loadAccount().catch((e) => {
+      toastError(e)
+      void api.signOut()
+    })
+  }, [userId, loadAccount])
 
   let content
   if (userId === undefined || (userId && !profile)) {
@@ -42,10 +45,10 @@ export function App() {
         </div>
       </div>
     )
-  } else if (!userId || !profile) {
+  } else if (!userId || !account) {
     content = <Login />
   } else {
-    content = <MainScreen profile={profile} onProfileChange={setProfile} />
+    content = <MainScreen profile={account.profile} history={account.history} onAccountChanged={() => loadAccount().catch(toastError)} />
   }
 
   return (

@@ -13,6 +13,7 @@ import {
   HEB_WEEKDAYS,
   startOfDay,
   yearRange,
+  type CycleSchedule,
   type Range,
 } from '../lib/time'
 import { hebrewDate } from '../lib/hebrew'
@@ -30,19 +31,19 @@ const MODES: { id: Mode; label: string }[] = [
   { id: 'year', label: 'שנה' },
 ]
 
-export function rangeFor(mode: Mode, anchor: Date, startDay: number): Range {
+export function rangeFor(mode: Mode, anchor: Date, schedule: CycleSchedule): Range {
   if (mode === 'day') return dayRange(anchor)
-  if (mode === 'month') return cycleFor(anchor, startDay)
-  return yearRange(cycleFor(anchor, startDay).labelYear, startDay)
+  if (mode === 'month') return cycleFor(anchor, schedule)
+  return yearRange(cycleFor(anchor, schedule).labelYear, schedule)
 }
 
 export function Records({
-  startDay,
+  schedule,
   userName,
   version,
   onChanged,
 }: {
-  startDay: number
+  schedule: CycleSchedule
   userName: string
   version: number
   onChanged: () => void
@@ -51,8 +52,8 @@ export function Records({
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()))
   const [adding, setAdding] = useState(false)
 
-  const range = useMemo(() => rangeFor(mode, anchor, startDay), [mode, anchor, startDay])
-  const cycle = cycleFor(anchor, startDay)
+  const range = useMemo(() => rangeFor(mode, anchor, schedule), [mode, anchor, schedule])
+  const cycle = cycleFor(anchor, schedule)
   const year = cycle.labelYear
 
   const data = useLoad(
@@ -108,9 +109,12 @@ export function Records({
           <button className="icon-btn" onClick={() => move(-1)} aria-label="הקודם">
             <ChevronRight size={22} />
           </button>
-          <PeriodPicker mode={mode} anchor={anchor} startDay={startDay} onPick={setAnchor}>
+          <PeriodPicker mode={mode} anchor={anchor} schedule={schedule} onPick={setAnchor}>
             <div className="font-display text-[22px] leading-tight font-semibold">{title}</div>
             <div className="text-sm text-ink-soft">{subtitle}</div>
+            {mode === 'month' && cycle.transition && (
+              <div className="mx-auto mt-1 w-fit rounded-md bg-note-tint px-1.5 py-0.5 text-xs font-medium text-note">חודש מעבר</div>
+            )}
           </PeriodPicker>
           <button className="icon-btn" onClick={() => move(1)} aria-label="הבא">
             <ChevronLeft size={22} />
@@ -125,7 +129,7 @@ export function Records({
             <Plus size={18} />
             הוספת רישום
           </button>
-          <ExportMenu anchor={anchor} startDay={startDay} userName={userName} mode={mode} />
+          <ExportMenu anchor={anchor} schedule={schedule} userName={userName} mode={mode} />
         </div>
       </div>
 
@@ -142,7 +146,7 @@ export function Records({
         (mode === 'year' ? (
           <YearTable
             year={year}
-            startDay={startDay}
+            schedule={schedule}
             sessions={data.data.sessions}
             onOpenMonth={(c) => {
               setAnchor(c.start)

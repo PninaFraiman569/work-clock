@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, KeyRound, LogOut, Users } from 'lucide-react'
+import { CalendarCog, ChevronDown, KeyRound, LogOut, Users } from 'lucide-react'
 import { api, type Profile } from '../api'
 import { APP_NAME } from '../config'
 import { Logo } from './Logo'
 import { PasswordDialog } from './PasswordDialog'
 import { AdminPanel } from './AdminPanel'
+import { MonthSettingsDialog } from './MonthSettingsDialog'
 
-export function Header({ profile, onProfileChange }: { profile: Profile; onProfileChange: (p: Profile) => void }) {
+export function Header({ profile, onAccountChanged }: { profile: Profile; onAccountChanged: () => void }) {
   const [open, setOpen] = useState(false)
-  const [dialog, setDialog] = useState<'password' | 'admin' | null>(null)
+  const [dialog, setDialog] = useState<'password' | 'month' | 'admin' | null>(null)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -54,6 +55,9 @@ export function Header({ profile, onProfileChange }: { profile: Profile; onProfi
               <MenuItem icon={<KeyRound size={17} />} onClick={() => (setDialog('password'), setOpen(false))}>
                 שינוי סיסמה
               </MenuItem>
+              <MenuItem icon={<CalendarCog size={17} />} onClick={() => (setDialog('month'), setOpen(false))}>
+                הגדרת חודש
+              </MenuItem>
               {profile.is_admin && (
                 <MenuItem icon={<Users size={17} />} onClick={() => (setDialog('admin'), setOpen(false))}>
                   ניהול משתמשים
@@ -69,11 +73,12 @@ export function Header({ profile, onProfileChange }: { profile: Profile; onProfi
       </header>
 
       {dialog === 'password' && <PasswordDialog onClose={() => setDialog(null)} />}
+      {dialog === 'month' && <MonthSettingsDialog user={profile} isSelf onClose={() => setDialog(null)} onSaved={onAccountChanged} />}
       {dialog === 'admin' && (
         <AdminPanel
           me={profile}
           onClose={() => setDialog(null)}
-          onSelfChanged={() => api.getProfile().then(onProfileChange)}
+          onSelfChanged={onAccountChanged}
         />
       )}
     </>

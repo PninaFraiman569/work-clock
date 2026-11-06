@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarDays, CalendarRange, FileSpreadsheet, LoaderCircle, Sun } from 'lucide-react'
 import { api } from '../api'
-import { cycleFor, cycleRangeText, cycleTitle, dayKey, formatDate, HEB_MONTHS, HEB_WEEKDAYS, type Range } from '../lib/time'
+import { cycleFor, cycleRangeText, cycleTitle, dayKey, formatDate, HEB_MONTHS, HEB_WEEKDAYS, type CycleSchedule, type Range } from '../lib/time'
 import { toast, toastError } from './Toaster'
 import { rangeFor, type Mode } from './Records'
 
-export function ExportMenu({ anchor, startDay, userName, mode }: { anchor: Date; startDay: number; userName: string; mode: Mode }) {
+export function ExportMenu({ anchor, schedule, userName, mode }: { anchor: Date; schedule: CycleSchedule; userName: string; mode: Mode }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<Mode | null>(null)
   const ref = useRef<HTMLDivElement>(null)
@@ -22,7 +22,7 @@ export function ExportMenu({ anchor, startDay, userName, mode }: { anchor: Date;
     }
   }, [open])
 
-  const cycle = cycleFor(anchor, startDay)
+  const cycle = cycleFor(anchor, schedule)
   const year = cycle.labelYear
   const options: { kind: Mode; icon: React.ReactNode; title: string; sub: string; fileTitle: string }[] = [
     {
@@ -47,7 +47,7 @@ export function ExportMenu({ anchor, startDay, userName, mode }: { anchor: Date;
   async function run(o: (typeof options)[number]) {
     setBusy(o.kind)
     try {
-      const range: Range = rangeFor(o.kind, anchor, startDay)
+      const range: Range = rangeFor(o.kind, anchor, schedule)
       const [sessions, notes] = await Promise.all([
         api.listSessions(range.start, range.end),
         api.listNotes(dayKey(range.start), dayKey(range.end)),
@@ -61,7 +61,7 @@ export function ExportMenu({ anchor, startDay, userName, mode }: { anchor: Date;
         sessions,
         notes,
         userName,
-        startDay,
+        schedule,
         year,
       })
       toast('קובץ האקסל ירד למחשב')

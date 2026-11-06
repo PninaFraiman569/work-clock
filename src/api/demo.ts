@@ -1,8 +1,10 @@
 // מצב הדגמה: עובד בלי שרת, שומר הכל בדפדפן בלבד.
 // נפתח אוטומטית כשלא הוגדרו משתני Supabase. שימושי לניסיון ולפיתוח.
 
-import { ApiError, type Api, type DayNote, type Profile, type WorkSession } from './types'
+import { ApiError, type Api, type CycleChange, type DayNote, type Profile, type WorkSession } from './types'
 import { DEFAULT_CYCLE_START_DAY } from '../config'
+import { cycleIndex, scheduleFromHistory } from '../lib/cycleChange'
+import { cycleFor, dayKey, startDayAt } from '../lib/time'
 import { normalizeUsername } from '../lib/username'
 
 const KEY = 'work-clock-demo-v1'
@@ -16,6 +18,7 @@ interface DemoState {
   users: DemoUser[]
   sessions: WorkSession[]
   notes: (DayNote & { user_id: string })[]
+  cycleChanges?: (CycleChange & { user_id: string })[]
 }
 
 const rid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -123,6 +126,51 @@ export function createDemoApi(): Api {
     },
     async getProfile() {
       return delay(strip(me()))
+    },
+
+    async getCycleHistory(userId) {
+      const id = userId ?? me().id
+      if (id !== me().id && !me().is_admin) throw new ApiError('הפעולה הזאת מותרת רק למנהל.')
+      const first = state.sessions
+        .filter((s) => s.user_id === id)
+        .map((s) => s.start_at)
+        .sort()[0]
+      return delay({
+        since: dayKey(first ? new Date(first) : new Date()),
+        changes: (state.cycleChanges ?? []).filter((c) => c.user_id === id).map(({ user_id: _u, ...c }) => ({ ...c })),
+      })
+    },
+    async setCycleStartDay(day, userId) {
+      const id = userId ?? me().id
+      if (id !== me().id && !me().is_admin) throw new ApiError('הפעולה הזאת מותרת רק למנהל.')
+      const user = state.users.find((u) => u.id === id)
+      if (!user) throw new ApiError('המשתמש לא נמצא.')
+      const all = state.cycleChanges ?? []
+      const own = all.filter((c) => c.user_id === id)
+      const schedule = scheduleFromHistory(user.cycle_start_day, { since: null, changes: own })
+      const current = cycleIndex(cycleFor(new Date(), schedule))
+      const effective = current + 1
+      const effectiveKey = `${Math.floor(effective / 12)}-${String((effective % 12) + 1).padStart(2, '0')}-01`
+      const inForce = startDayAt(schedule, current)
+      const kept = all.filter((c) => c.user_id !== id || c.effective_month < effectiveKey)
+      if (day !== inForce) {
+        kept.push({
+          user_id: id,
+          effective_month: effectiveKey,
+          old_start_day: inForce,
+          new_start_day: day,
+          changed_at: new Date().toISOString(),
+          notice_pending: id !== me().id,
+        })
+      }
+      state.cycleChanges = kept
+      user.cycle_start_day = day
+      save()
+    },
+    async ackCycleNotices() {
+      const id = me().id
+      for (const c of state.cycleChanges ?? []) if (c.user_id === id) c.notice_pending = false
+      save()
     },
 
     async listSessions(from, to) {

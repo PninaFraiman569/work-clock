@@ -29,6 +29,7 @@ npm run dev
    - סיסמה למסד: לבחור סיסמה חזקה ולשמור אותה במקום בטוח
    - Region: לבחור את הקרוב לישראל (למשל Frankfurt)
 2. כשהפרויקט מוכן, בתפריט הצד: **SQL Editor** ← **New query**. מדביקים את כל התוכן של `supabase/schema.sql` ולוחצים על **Run**. אמורה להופיע ההודעה "Success".
+   אחרי זה, באותה דרך, מריצים גם את כל התוכן של `supabase/cycle-changes.sql` (הגדרת חודש והיסטוריה).
 3. **ביטול הרשמה עצמית:** בתפריט הצד: **Authentication** ← **Sign In / Providers**. מכבים את **Allow new users to sign up** ושומרים. כך רק המנהל יכול ליצור משתמשים.
 4. **יצירת המנהל (אתה):** **Authentication** ← **Users** ← **Add user** ← **Create new user**.
    - Email: `admin@workclock.local` (במקום `admin` אפשר לבחור שם משתמש אחר באנגלית, ואז להתחבר איתו)
@@ -106,6 +107,7 @@ src/
   components/          מסכים ורכיבים
 supabase/
   schema.sql           טבלאות והרשאות
+  cycle-changes.sql    הגדרת חודש: שינוי בלי השפעה אחורה, עם היסטוריה
   functions/admin-users פונקציית ניהול משתמשים
 ```
 

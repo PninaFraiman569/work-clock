@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { cycleByLabel, cycleFor, HEB_MONTHS, HEB_WEEKDAYS_SHORT, isSameDay, startOfDay } from '../lib/time'
+import { cycleByLabel, cycleFor, HEB_MONTHS, HEB_WEEKDAYS_SHORT, isSameDay, startOfDay, type CycleSchedule } from '../lib/time'
 import type { Mode } from './Records'
 
 const YEARS_PER_PAGE = 12
@@ -9,13 +9,13 @@ const YEARS_PER_PAGE = 12
 export function PeriodPicker({
   mode,
   anchor,
-  startDay,
+  schedule,
   onPick,
   children,
 }: {
   mode: Mode
   anchor: Date
-  startDay: number
+  schedule: CycleSchedule
   onPick: (d: Date) => void
   children: ReactNode
 }) {
@@ -70,8 +70,8 @@ export function PeriodPicker({
           className="modal-in absolute top-full left-1/2 z-30 mt-2 w-[19rem] -translate-x-1/2 rounded-2xl border border-line bg-surface p-3 shadow-xl"
         >
           {mode === 'day' && <DayPanel anchor={anchor} onPick={pick} />}
-          {mode === 'month' && <MonthPanel anchor={anchor} startDay={startDay} onPick={pick} />}
-          {mode === 'year' && <YearPanel anchor={anchor} startDay={startDay} onPick={pick} />}
+          {mode === 'month' && <MonthPanel anchor={anchor} schedule={schedule} onPick={pick} />}
+          {mode === 'year' && <YearPanel anchor={anchor} schedule={schedule} onPick={pick} />}
         </div>
       )}
     </div>
@@ -149,9 +149,9 @@ function DayPanel({ anchor, onPick }: { anchor: Date; onPick: (d: Date) => void 
   )
 }
 
-function MonthPanel({ anchor, startDay, onPick }: { anchor: Date; startDay: number; onPick: (d: Date) => void }) {
-  const current = cycleFor(anchor, startDay)
-  const now = cycleFor(new Date(), startDay)
+function MonthPanel({ anchor, schedule, onPick }: { anchor: Date; schedule: CycleSchedule; onPick: (d: Date) => void }) {
+  const current = cycleFor(anchor, schedule)
+  const now = cycleFor(new Date(), schedule)
   const [year, setYear] = useState(current.labelYear)
 
   return (
@@ -176,7 +176,7 @@ function MonthPanel({ anchor, startDay, onPick }: { anchor: Date; startDay: numb
             <button
               key={name}
               type="button"
-              onClick={() => onPick(cycleByLabel(year, m, startDay).start)}
+              onClick={() => onPick(cycleByLabel(year, m, schedule).start)}
               aria-pressed={selected}
               aria-current={isNow ? 'date' : undefined}
               className={optionClass(selected, isNow, 'h-11 text-[15px]')}
@@ -190,9 +190,9 @@ function MonthPanel({ anchor, startDay, onPick }: { anchor: Date; startDay: numb
   )
 }
 
-function YearPanel({ anchor, startDay, onPick }: { anchor: Date; startDay: number; onPick: (d: Date) => void }) {
-  const current = cycleFor(anchor, startDay).labelYear
-  const now = cycleFor(new Date(), startDay).labelYear
+function YearPanel({ anchor, schedule, onPick }: { anchor: Date; schedule: CycleSchedule; onPick: (d: Date) => void }) {
+  const current = cycleFor(anchor, schedule).labelYear
+  const now = cycleFor(new Date(), schedule).labelYear
   const [first, setFirst] = useState(current - (current % YEARS_PER_PAGE))
   const last = first + YEARS_PER_PAGE - 1
 
