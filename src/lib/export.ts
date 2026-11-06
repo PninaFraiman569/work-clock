@@ -3,6 +3,7 @@ import type { DayNote, WorkSession } from '../api/types'
 import {
   addDays,
   cycleRangeText,
+  DAY_MS,
   formatDate,
   groupByDay,
   HEB_MONTHS,
@@ -35,8 +36,8 @@ const SUNK = 'FFF4F6FA'
 const excelDate = (d: Date) => new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
 /** שעה ביום כשבר של יממה */
 const dayFraction = (d: Date) => (d.getHours() * 60 + d.getMinutes()) / 1440
-/** משך כשבר של יממה, מעוגל לדקות */
-const durationValue = (ms: number) => Math.floor(ms / 60_000) / 1440
+/** משך מדויק כשבר של יממה, כדי שסיכום השורות באקסל יהיה זהה לסיכום באתר */
+const durationValue = (ms: number) => ms / DAY_MS
 
 export async function exportToExcel(req: ExportRequest) {
   const ExcelJS = (await import('exceljs')).default
@@ -107,7 +108,7 @@ export async function exportToExcel(req: ExportRequest) {
     row.getCell(1).numFmt = 'dd/mm/yyyy'
     row.getCell(4).numFmt = 'hh:mm'
     row.getCell(5).numFmt = 'hh:mm'
-    row.getCell(6).numFmt = '[h]:mm'
+    row.getCell(6).numFmt = '[h]:mm:ss'
     row.alignment = { horizontal: 'right' }
     row.getCell(7).alignment = { horizontal: 'right', wrapText: true }
     r++
@@ -119,7 +120,7 @@ export async function exportToExcel(req: ExportRequest) {
     lastDataRow >= firstDataRow
       ? { formula: `SUM(F${firstDataRow}:F${lastDataRow})`, result: durationValue(sumMs(pieces)) }
       : 0
-  totalRow.getCell(6).numFmt = '[h]:mm'
+  totalRow.getCell(6).numFmt = '[h]:mm:ss'
   totalRow.font = { bold: true }
   totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } }
   totalRow.alignment = { horizontal: 'right' }
@@ -145,7 +146,7 @@ export async function exportToExcel(req: ExportRequest) {
     const row = ws2.getRow(r)
     row.values = [excelDate(d), hebrewDate(d), HEB_WEEKDAYS[d.getDay()], list.length, durationValue(sumMs(list)), noteMap.get(key) ?? '']
     row.getCell(1).numFmt = 'dd/mm/yyyy'
-    row.getCell(5).numFmt = '[h]:mm'
+    row.getCell(5).numFmt = '[h]:mm:ss'
     row.alignment = { horizontal: 'right' }
     row.getCell(6).alignment = { horizontal: 'right', wrapText: true }
     r++
@@ -154,7 +155,7 @@ export async function exportToExcel(req: ExportRequest) {
   t2.getCell(1).value = 'סה״כ'
   t2.getCell(4).value = byDay.size ? `${byDay.size} ימים` : ''
   t2.getCell(5).value = days.length ? { formula: `SUM(E4:E${r - 1})`, result: durationValue(sumMs(pieces)) } : 0
-  t2.getCell(5).numFmt = '[h]:mm'
+  t2.getCell(5).numFmt = '[h]:mm:ss'
   t2.font = { bold: true }
   t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } }
   t2.alignment = { horizontal: 'right' }
@@ -178,7 +179,7 @@ export async function exportToExcel(req: ExportRequest) {
       sum += ms
       const row = ws3.getRow(r)
       row.values = [HEB_MONTHS[c.labelMonth], cycleRangeText(c), groupByDay(ps).size, durationValue(ms)]
-      row.getCell(4).numFmt = '[h]:mm'
+      row.getCell(4).numFmt = '[h]:mm:ss'
       row.alignment = { horizontal: 'right' }
       if (r % 2 === 1) row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: SUNK } }
       r++
@@ -187,7 +188,7 @@ export async function exportToExcel(req: ExportRequest) {
     t3.getCell(1).value = 'סה״כ'
     t3.getCell(3).value = { formula: `SUM(C4:C${r - 1})`, result: byDay.size }
     t3.getCell(4).value = { formula: `SUM(D4:D${r - 1})`, result: durationValue(sum) }
-    t3.getCell(4).numFmt = '[h]:mm'
+    t3.getCell(4).numFmt = '[h]:mm:ss'
     t3.font = { bold: true }
     t3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TINT } }
     t3.alignment = { horizontal: 'right' }

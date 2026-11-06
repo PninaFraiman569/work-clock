@@ -155,12 +155,12 @@ export function ClockHero({
 
 function Stat({ title, value, sub, live }: { title: string; value: string; sub?: string; live?: boolean }) {
   return (
-    <div className="flex flex-col justify-center border-line px-8 py-5 not-last:border-e lg:not-last:border-e-0 lg:not-last:border-b">
+    <div className="flex flex-col justify-center border-line px-2 py-5 not-last:border-e sm:px-3 md:px-8 lg:not-last:border-e-0 lg:not-last:border-b">
       <div className="flex items-center gap-2 text-[15px] text-ink-soft">
         {title}
         {live && <span className="size-1.5 rounded-full bg-live" />}
       </div>
-      <div className="num mt-1 text-[34px] leading-tight font-medium" dir="ltr" style={{ textAlign: 'right' }}>
+      <div className="num mt-1 text-[17px] leading-tight font-medium sm:text-[22px] md:text-[34px]" dir="ltr" style={{ textAlign: 'right' }}>
         {value}
       </div>
       {sub && <div className="text-sm text-ink-soft">{sub}</div>}

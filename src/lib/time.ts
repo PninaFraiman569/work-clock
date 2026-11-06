@@ -48,10 +48,10 @@ export function formatDateShort(d: Date): string {
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`
 }
 
-/** משך בפורמט H:MM (למשל 7:36), גם מעל 24 שעות */
+/** משך בפורמט H:MM:SS (למשל 7:36:05), גם מעל 24 שעות. מעוגל לשנייה הקרובה, כמו התצוגה באקסל */
 export function formatDuration(ms: number): string {
-  const totalMin = Math.floor(Math.max(0, ms) / 60_000)
-  return `${Math.floor(totalMin / 60)}:${pad(totalMin % 60)}`
+  const s = Math.round(Math.max(0, ms) / 1000)
+  return `${Math.floor(s / 3600)}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
 }
 
 /** משך בפורמט HH:MM:SS לשעון העצר */

@@ -20,6 +20,7 @@ import { DaysTable } from './DaysTable'
 import { YearTable } from './YearTable'
 import { ExportMenu } from './ExportMenu'
 import { AddEntryDialog } from './AddEntryDialog'
+import { PeriodPicker } from './PeriodPicker'
 
 export type Mode = 'day' | 'month' | 'year'
 
@@ -71,8 +72,6 @@ export function Records({
     else setAnchor(new Date(year + dir, 5, 15))
   }
 
-  const isCurrent = dayKey(rangeFor(mode, new Date(), startDay).start) === dayKey(range.start)
-
   let title: string
   let subtitle: string
   if (mode === 'day') {
@@ -109,18 +108,16 @@ export function Records({
           <button className="icon-btn" onClick={() => move(-1)} aria-label="הקודם">
             <ChevronRight size={22} />
           </button>
-          <div className="min-w-[210px] px-2 text-center">
+          <PeriodPicker mode={mode} anchor={anchor} startDay={startDay} onPick={setAnchor}>
             <div className="font-display text-[22px] leading-tight font-semibold">{title}</div>
             <div className="text-sm text-ink-soft">{subtitle}</div>
-          </div>
+          </PeriodPicker>
           <button className="icon-btn" onClick={() => move(1)} aria-label="הבא">
             <ChevronLeft size={22} />
           </button>
-          {!isCurrent && (
-            <button className="btn btn-ghost ms-2 h-9 px-3 text-sm" onClick={() => setAnchor(startOfDay(new Date()))}>
-              {mode === 'day' ? 'להיום' : mode === 'month' ? 'לחודש הנוכחי' : 'לשנה הנוכחית'}
-            </button>
-          )}
+          <button className="btn btn-ghost ms-2 h-9 px-3 text-sm" onClick={() => setAnchor(startOfDay(new Date()))}>
+            {mode === 'day' ? 'להיום' : mode === 'month' ? 'לחודש הנוכחי' : 'לשנה הנוכחית'}
+          </button>
         </div>
 
         <div className="ms-auto flex items-center gap-2">

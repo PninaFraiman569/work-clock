@@ -278,7 +278,7 @@ function SegmentRow({
   }
 
   return (
-    <tr className={`group ${first ? '' : ''} ${piece.running ? 'bg-live-tint/50' : 'hover:bg-sunk/60'}`}>
+    <tr className={`group ${first ? '' : 'border-t border-line/60'} ${piece.running ? 'bg-live-tint/50' : 'hover:bg-sunk/60'}`}>
       {dateCell}
       <td className="px-2 py-1.5 align-middle">
         {piece.continuesFromPrev ? (
