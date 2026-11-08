@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, type CycleHistory, type Profile } from '../api'
 import { useLoad, useNow, useOnFocus } from '../hooks/hooks'
 import { scheduleFromHistory } from '../lib/cycleChange'
@@ -7,6 +7,9 @@ import { Header } from './Header'
 import { ClockHero } from './ClockHero'
 import { Records } from './Records'
 import { MonthNotice } from './MonthNotice'
+import { OfflineBanner } from './OfflineBanner'
+import { InstallBanner } from './InstallBanner'
+import { onDataChanged } from '../lib/syncStatus'
 
 export function MainScreen({
   profile,
@@ -20,6 +23,8 @@ export function MainScreen({
   const [version, setVersion] = useState(0)
   const bump = useCallback(() => setVersion((v) => v + 1), [])
   useOnFocus(bump)
+  // אחרי שליחה של רישומים מהמחשב, או כשהחיבור חוזר
+  useEffect(() => onDataChanged(bump), [bump])
 
   // מתעדכן פעם בדקה; מספיק כדי לזהות מעבר יום
   const minuteNow = useNow(60_000)
@@ -44,6 +49,8 @@ export function MainScreen({
   return (
     <div className="min-h-screen">
       <Header profile={profile} onAccountChanged={onAccountChanged} />
+      <OfflineBanner />
+      <InstallBanner />
       <MonthNotice profileDay={profile.cycle_start_day} history={history} />
       <main className="mx-auto max-w-[1200px] px-8 pb-24">
         <ClockHero

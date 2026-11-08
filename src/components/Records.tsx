@@ -22,6 +22,7 @@ import { YearTable } from './YearTable'
 import { ExportMenu } from './ExportMenu'
 import { AddEntryDialog } from './AddEntryDialog'
 import { PeriodPicker } from './PeriodPicker'
+import { useSyncStatus } from '../lib/syncStatus'
 
 export type Mode = 'day' | 'month' | 'year'
 
@@ -51,6 +52,7 @@ export function Records({
   const [mode, setMode] = useState<Mode>('month')
   const [anchor, setAnchor] = useState(() => startOfDay(new Date()))
   const [adding, setAdding] = useState(false)
+  const { offline } = useSyncStatus()
 
   const range = useMemo(() => rangeFor(mode, anchor, schedule), [mode, anchor, schedule])
   const cycle = cycleFor(anchor, schedule)
@@ -125,7 +127,12 @@ export function Records({
         </div>
 
         <div className="ms-auto flex items-center gap-2">
-          <button className="btn btn-ghost bg-surface" onClick={() => setAdding(true)}>
+          <button
+            className="btn btn-ghost bg-surface"
+            onClick={() => setAdding(true)}
+            disabled={offline}
+            title={offline ? 'אפשרי רק כשיש חיבור לאינטרנט' : undefined}
+          >
             <Plus size={18} />
             הוספת רישום
           </button>

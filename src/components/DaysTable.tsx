@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, CornerDownLeft, CornerUpRight, NotebookPen, Plus, Trash2, X } from 'lucide-react'
+import { Check, CloudUpload, CornerDownLeft, CornerUpRight, NotebookPen, Plus, Trash2, X } from 'lucide-react'
 import { api, type DayNote, type WorkSession } from '../api'
 import { useNow } from '../hooks/hooks'
 import {
@@ -21,6 +21,10 @@ import { hebrewDayMonth } from '../lib/hebrew'
 import { resolveEntry } from '../lib/entry'
 import { normalizeTime, TextCell, TimeField, TimeInput } from './TimeInput'
 import { toast, toastError } from './Toaster'
+import { useSyncStatus } from '../lib/syncStatus'
+
+const OFFLINE_HINT = 'עריכה אפשרית רק כשיש חיבור לאינטרנט'
+const PENDING_HINT = 'הרישום שמור במחשב ועוד לא נשלח. אפשר יהיה לערוך אותו אחרי שיישלח.'
 
 export function DaysTable({
   mode,
@@ -135,6 +139,7 @@ function DayBlock({
   onChanged: () => void
 }) {
   const [adding, setAdding] = useState(false)
+  const { offline } = useSyncStatus()
   const day = parseDayKey(dayKeyStr)
   const total = sumMs(pieces)
   const rows = pieces.length + (adding ? 1 : 0) + (pieces.length === 0 && !adding ? 1 : 0) + 1
@@ -204,7 +209,7 @@ function DayBlock({
       <tr>
         <td colSpan={5} className="px-3 pt-1 pb-3">
           <div className="flex items-center gap-3">
-            {!adding && (
+            {!adding && !offline && (
               <button className="btn h-8 shrink-0 rounded-lg px-2.5 text-sm text-brand hover:bg-brand-tint" onClick={() => setAdding(true)}>
                 <Plus size={16} />
                 מקטע
@@ -218,6 +223,8 @@ function DayBlock({
                 placeholder="הערה ליום (לא חובה)"
                 label={`הערה ליום ${formatDate(day)}`}
                 className="text-[15px] text-note!"
+                disabled={offline}
+                title={offline ? OFFLINE_HINT : undefined}
               />
             </div>
           </div>
@@ -239,7 +246,10 @@ function SegmentRow({
   onChanged: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
+  const { offline } = useSyncStatus()
   const s = piece.session
+  const locked = offline || !!s.pending
+  const lockHint = s.pending ? PENDING_HINT : offline ? OFFLINE_HINT : undefined
   const pieceDay = parseDayKey(piece.day)
   const sessionStart = new Date(s.start_at)
 
@@ -284,7 +294,7 @@ function SegmentRow({
         {piece.continuesFromPrev ? (
           <Fixed time="00:00" hint="ההמשך של רישום שהתחיל ביום הקודם" icon={<CornerUpRight size={14} />} />
         ) : (
-          <TimeInput value={formatTime(piece.start)} onCommit={commitStart} label="שעת התחלה" />
+          <TimeInput value={formatTime(piece.start)} onCommit={commitStart} label="שעת התחלה" disabled={locked} title={lockHint} />
         )}
       </td>
       <td className="px-2 py-1.5 align-middle">
@@ -296,7 +306,7 @@ function SegmentRow({
         ) : piece.continuesToNext ? (
           <Fixed time="24:00" hint="הרישום ממשיך ליום הבא" icon={<CornerDownLeft size={14} />} />
         ) : (
-          <TimeInput value={formatTime(piece.end)} onCommit={commitEnd} label="שעת סיום" />
+          <TimeInput value={formatTime(piece.end)} onCommit={commitEnd} label="שעת סיום" disabled={locked} title={lockHint} />
         )}
       </td>
       <td className="num px-3 py-1.5 align-middle font-medium" dir="ltr" style={{ textAlign: 'right' }}>
@@ -306,12 +316,18 @@ function SegmentRow({
         <TextCell
           value={s.description}
           onCommit={(v) => void update({ description: v })}
-          placeholder="מה עשיתי בשעות האלה?"
+          placeholder={locked ? '' : 'מה עשיתי בשעות האלה?'}
           label="מה עשיתי"
+          disabled={locked}
+          title={lockHint}
         />
       </td>
       <td className="px-2 py-1.5 align-middle">
-        {confirming ? (
+        {s.pending ? (
+          <span className="grid size-9 place-items-center text-brand" title={PENDING_HINT} aria-label="עוד לא נשלח">
+            <CloudUpload size={17} />
+          </span>
+        ) : offline ? null : confirming ? (
           <div className="flex items-center gap-0.5">
             <button className="icon-btn size-8 text-stop hover:bg-stop-tint hover:text-stop" onClick={remove} aria-label="אישור מחיקה" title="מחיקה">
               <Check size={17} />

@@ -56,7 +56,19 @@ export function TimeField({
 }
 
 /** שדה שעה בטבלה: נשמר כשיוצאים ממנו (או ב-Enter) */
-export function TimeInput({ value, onCommit, label }: { value: string; onCommit: (v: string) => void; label: string }) {
+export function TimeInput({
+  value,
+  onCommit,
+  label,
+  disabled,
+  title,
+}: {
+  value: string
+  onCommit: (v: string) => void
+  label: string
+  disabled?: boolean
+  title?: string
+}) {
   const [v, setV] = useState(value)
   useEffect(() => setV(value), [value])
 
@@ -75,6 +87,8 @@ export function TimeInput({ value, onCommit, label }: { value: string; onCommit:
       className="cell-input time-input"
       value={v}
       aria-label={label}
+      disabled={disabled}
+      title={title}
       onChange={(e) => setV(e.target.value.replace(/[^\d:.]/g, ''))}
       onBlur={commit}
       onFocus={(e) => e.target.select()}
@@ -93,12 +107,16 @@ export function TextCell({
   placeholder,
   label,
   className = '',
+  disabled,
+  title,
 }: {
   value: string
   onCommit: (v: string) => void
   placeholder?: string
   label: string
   className?: string
+  disabled?: boolean
+  title?: string
 }) {
   const [v, setV] = useState(value)
   useEffect(() => setV(value), [value])
@@ -106,6 +124,8 @@ export function TextCell({
     <input
       className={`cell-input ${className}`}
       value={v}
+      disabled={disabled}
+      title={title}
       placeholder={placeholder}
       aria-label={label}
       onChange={(e) => setV(e.target.value)}

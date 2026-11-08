@@ -1,12 +1,30 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { ApiError, type Api, type CycleHistory, type DayNote, type NewUserInput, type Profile, type WorkSession } from './types'
+import { ApiError, NetworkError, type Api, type CycleHistory, type DayNote, type NewUserInput, type Profile, type WorkSession } from './types'
+import type { OfflineBackend, SessionRow } from './offline'
 import { usernameToEmail } from '../lib/username'
 
 const SESSION_COLS = 'id,user_id,start_at,end_at,description'
+/** בקשה שלא נענתה בזמן הזה נחשבת כאילו אין חיבור */
+const REQUEST_TIMEOUT_MS = 20_000
+
+const isNetworkMessage = (m: string) =>
+  /Failed to fetch|NetworkError|Load failed|network|AbortError|aborted|timed? ?out|Failed to send a request/i.test(m)
 
 function check<T>(res: { data: T; error: { message: string; code?: string } | null }): T {
-  if (res.error) throw new ApiError(translateError(res.error.message, res.error.code))
+  if (res.error) {
+    // שגיאת רשת מגיעה בלי קוד מהשרת
+    if (!res.error.code && isNetworkMessage(res.error.message)) throw new NetworkError()
+    throw new ApiError(translateError(res.error.message, res.error.code), res.error.code, res.error.message)
+  }
   return res.data
+}
+
+/** fetch עם הגבלת זמן, כדי שחיבור חלש לא ישאיר את האתר תקוע */
+const fetchWithTimeout: typeof fetch = (input, init) => {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
+  init?.signal?.addEventListener('abort', () => ctrl.abort())
+  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer))
 }
 
 function translateError(message: string, code?: string): string {
@@ -21,16 +39,21 @@ function translateError(message: string, code?: string): string {
   return message
 }
 
-export function createSupabaseApi(url: string, key: string): Api {
+export function createSupabaseApi(url: string, key: string): OfflineBackend {
   const sb: SupabaseClient = createClient(url, key, {
     auth: { persistSession: true, autoRefreshToken: true },
+    global: { fetch: fetchWithTimeout },
   })
+  // אותו שם ש-Supabase נותן כברירת מחדל, כדי לא לנתק משתמשים קיימים
+  const storageKey = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`
 
   async function uid(): Promise<string> {
-    const { data } = await sb.auth.getSession()
+    const { data, error } = await sb.auth.getSession()
     const id = data.session?.user.id
-    if (!id) throw new ApiError('צריך להתחבר מחדש.')
-    return id
+    if (id) return id
+    // בלי חיבור Supabase לא מצליח לחדש את ההתחברות, אבל לא מוחק אותה
+    if (error && isNetworkMessage(error.message)) throw new NetworkError()
+    throw new ApiError('צריך להתחבר מחדש.')
   }
 
   async function admin<T = unknown>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
@@ -43,12 +66,13 @@ export function createSupabaseApi(url: string, key: string): Api {
       } catch {
         /* אין גוף תשובה */
       }
+      if (isNetworkMessage(msg)) throw new NetworkError()
       throw new ApiError(translateError(msg))
     }
     return data as T
   }
 
-  return {
+  const api: Api = {
     demo: false,
 
     async currentUserId() {
@@ -67,7 +91,8 @@ export function createSupabaseApi(url: string, key: string): Api {
     },
 
     async signOut() {
-      await sb.auth.signOut()
+      // local: היציאה מהמחשב הזה לא תלויה בחיבור לאינטרנט
+      await sb.auth.signOut({ scope: 'local' })
     },
 
     async changePassword(newPassword) {
@@ -178,6 +203,24 @@ export function createSupabaseApi(url: string, key: string): Api {
 
     async adminUpdateUser(userId, patch) {
       await admin('update', { user_id: userId, ...patch })
+    },
+  }
+
+  return {
+    ...api,
+
+    async putSession(row: SessionRow) {
+      return check(await sb.from('work_sessions').insert(row).select(SESSION_COLS).single()) as WorkSession
+    },
+
+    storedUserId() {
+      try {
+        const raw = localStorage.getItem(storageKey)
+        const saved = raw ? (JSON.parse(raw) as { refresh_token?: string; user?: { id?: string } }) : null
+        return saved?.refresh_token && saved.user?.id ? saved.user.id : null
+      } catch {
+        return null
+      }
     },
   }
 }

@@ -4,10 +4,13 @@ import { api } from '../api'
 import { cycleFor, cycleRangeText, cycleTitle, dayKey, formatDate, HEB_MONTHS, HEB_WEEKDAYS, type CycleSchedule, type Range } from '../lib/time'
 import { toast, toastError } from './Toaster'
 import { rangeFor, type Mode } from './Records'
+import { useSyncStatus } from '../lib/syncStatus'
 
 export function ExportMenu({ anchor, schedule, userName, mode }: { anchor: Date; schedule: CycleSchedule; userName: string; mode: Mode }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<Mode | null>(null)
+  // הקובץ חייב לכלול את כל הרישומים מהשרת, ולכן רק עם חיבור
+  const { offline } = useSyncStatus()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,7 +78,13 @@ export function ExportMenu({ anchor, schedule, userName, mode }: { anchor: Date;
 
   return (
     <div className="relative" ref={ref}>
-      <button className="btn btn-primary" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button
+        className="btn btn-primary"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        disabled={offline}
+        title={offline ? 'אפשרי רק כשיש חיבור לאינטרנט' : undefined}
+      >
         <FileSpreadsheet size={18} />
         ייצוא לאקסל
       </button>

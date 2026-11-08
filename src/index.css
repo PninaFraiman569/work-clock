@@ -145,6 +145,11 @@ body {
   border-color: var(--color-line);
   background: var(--color-surface);
 }
+.cell-input:disabled {
+  cursor: default;
+  border-color: transparent;
+  background: transparent;
+}
 .cell-input:focus {
   outline: none;
   border-color: var(--color-brand);

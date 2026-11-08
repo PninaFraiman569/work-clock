@@ -4,6 +4,8 @@ export interface WorkSession {
   start_at: string // ISO
   end_at: string | null // null = השעון רץ
   description: string
+  /** נשמר רק במחשב הזה, ועוד לא נשלח לשרת */
+  pending?: boolean
 }
 
 export interface DayNote {
@@ -76,4 +78,20 @@ export interface Api {
   adminUpdateUser(userId: string, patch: { display_name?: string; disabled?: boolean }): Promise<void>
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  /** קוד השגיאה מהשרת, ופירוט השגיאה המקורי (לפני התרגום) */
+  readonly code?: string
+  readonly raw?: string
+  constructor(message: string, code?: string, raw?: string) {
+    super(message)
+    this.code = code
+    this.raw = raw
+  }
+}
+
+/** השרת לא זמין: אין אינטרנט, או שהבקשה לא הגיעה ליעדה */
+export class NetworkError extends ApiError {
+  constructor(message = 'אין חיבור לאינטרנט. הפעולה הזאת אפשרית רק כשיש חיבור.') {
+    super(message)
+  }
+}
